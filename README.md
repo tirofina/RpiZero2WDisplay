@@ -4,10 +4,15 @@ On-demand display and touch tooling for a **Raspberry Pi Zero 2 W** running **Di
 
 This repository keeps the Pi lightweight: no LightDM, no full desktop, and no permanent GUI session. Python, camera, pygame, OpenCV, tkinter, Qt, or matplotlib apps can be launched on the LCD only when needed.
 
-![Matrix-style green heart preview](heart_preview.png)
+## Preview
+
+| Static Green Heart | Animated Green Heart |
+| --- | --- |
+| <img src="heart_preview.png" alt="Matrix-style static green heart preview" width="240"> | <img src="animation_preview.png" alt="Matrix-style animated green heart preview" width="320"> |
 
 ## Table Of Contents
 
+- [Preview](#preview)
 - [Tested Setup](#tested-setup)
 - [What This Provides](#what-this-provides)
 - [Repository Layout](#repository-layout)
@@ -112,7 +117,7 @@ The demos use a black-and-green Matrix-style visual treatment: digital code rain
 
 `heart_display.py` renders a centered neon green heart over a Matrix-style digital rain background.
 
-![Matrix-style green heart preview](heart_preview.png)
+<img src="heart_preview.png" alt="Matrix-style static green heart preview" width="240">
 
 Recommended command:
 
@@ -142,7 +147,7 @@ python3 heart_display.py --sdl-driver=offscreen --size 240x320 --duration 0.1 --
 
 `heart_animation.py` is a lightweight pygame animation for checking that the on-demand X11 path can render moving graphics smoothly on the Waveshare LCD. It draws:
 
-![Matrix-style green animation preview](animation_preview.png)
+<img src="animation_preview.png" alt="Matrix-style animated green heart preview" width="320">
 
 - animated digital code rain,
 - green wave lines,
