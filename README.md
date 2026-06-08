@@ -48,7 +48,7 @@ This repository keeps the Pi lightweight: no LightDM, no full desktop, and no pe
 - Adds an on-demand X11 launcher for GUI applications.
 - Adds ADS7846 touchscreen calibration for X11.
 - Provides a Matrix-glitch pygame heart demo with a code-filled heart material.
-- Provides a Matrix-glitch animated pygame demo with changing glyphs and stronger horizontal glitch bands.
+- Provides an optimized Matrix-glitch animated pygame demo with cached frames and stronger horizontal glitch bands.
 - Provides a pygame touch tester for coordinate verification.
 - Avoids enabling a permanent desktop environment.
 
@@ -63,7 +63,7 @@ This repository keeps the Pi lightweight: no LightDM, no full desktop, and no pe
 | `run_heart_waveshare28a.sh` | Convenience launcher for the Matrix-style pygame heart demo. |
 | `run_animation_waveshare28a.sh` | Convenience launcher for the animated pygame demo. |
 | `heart_display.py` | Matrix-glitch pygame display test with a code-filled heart and glitch-only overlay. |
-| `heart_animation.py` | Matrix-glitch animated heart with changing glyphs and stronger horizontal glitch bands. |
+| `heart_animation.py` | Optimized Matrix-glitch animated heart with cached glyph/heart frames and stronger horizontal glitch bands. |
 | `touch_test.py` | Pygame touch coordinate test app. |
 | `heart_preview.png` | Offscreen-rendered preview of the heart demo. |
 | `animation_preview.png` | Offscreen-rendered preview frame of the animation demo. |
@@ -145,7 +145,7 @@ python3 heart_display.py --sdl-driver=offscreen --size 240x320 --duration 0.1 --
 
 ### Animated Green Heart
 
-`heart_animation.py` is a lightweight pygame animation for checking that the on-demand X11 path can render moving graphics smoothly on the Waveshare LCD. The background uses a sparse Matrix-style glyph field with characters that mutate over time, plus stronger horizontal glitch bands. It draws:
+`heart_animation.py` is a lightweight pygame animation for checking that the on-demand X11 path can render moving graphics smoothly on the Waveshare LCD. It precomputes glyph, background, heart, and glitch frames at startup, then reuses cached surfaces during playback to reduce CPU load on the Raspberry Pi Zero 2 W. The background uses a sparse Matrix-style glyph field with characters that mutate over time, plus stronger horizontal glitch bands. It draws:
 
 <img src="animation_preview.png" alt="Matrix-style animated green heart preview" width="320">
 
@@ -173,10 +173,10 @@ Force the verified Waveshare framebuffer size:
 SIZE=320x240 duration=10 ./run_animation_waveshare28a.sh
 ```
 
-Lower the frame rate if the Pi is busy:
+The launcher defaults to `FPS=15` for the Pi Zero 2 W. Lower the frame rate if the Pi is still busy:
 
 ```bash
-FPS=15 duration=10 ./run_animation_waveshare28a.sh
+FPS=10 duration=10 ./run_animation_waveshare28a.sh
 ```
 
 Run it directly through the generic launcher:
@@ -422,7 +422,7 @@ python3 heart_display.py --sdl-driver=offscreen --size 240x320 --duration 0.1 --
 | `SDL_DRIVER` | `auto` | SDL driver used in framebuffer mode, for example `kmsdrm`. |
 | `SIZE` | unset | Optional forced render size, for example `320x240`. |
 | `duration` | `0` | Demo duration in seconds. `0` waits until quit. `DURATION` is still accepted as a compatibility alias. |
-| `FPS` | `30` | Animation frame rate used by `run_animation_waveshare28a.sh`. |
+| `FPS` | `15` | Animation frame rate used by `run_animation_waveshare28a.sh`. Use `FPS=10` on slower runs. |
 | `PYTHON_BIN` | `python3` | Python interpreter used by `run_heart_waveshare28a.sh`. |
 | `DISPLAY_NUM` | `:1` | Temporary X11 display number used by `lcd-run.sh x`. |
 

@@ -8,7 +8,7 @@ RUN_MODE="${RUN_MODE:-x}"
 SDL_DRIVER="${SDL_DRIVER:-auto}"
 duration="${duration:-${DURATION:-0}}"
 SIZE="${SIZE:-}"
-FPS="${FPS:-30}"
+FPS="${FPS:-15}"
 
 if [[ ! -e "$FBDEV" ]]; then
   echo "Missing framebuffer device: ${FBDEV}"
