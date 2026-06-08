@@ -4,7 +4,7 @@ On-demand display and touch tooling for a **Raspberry Pi Zero 2 W** running **Di
 
 This repository keeps the Pi lightweight: no LightDM, no full desktop, and no permanent GUI session. Python, camera, pygame, OpenCV, tkinter, Qt, or matplotlib apps can be launched on the LCD only when needed.
 
-![Heart preview](heart_preview.png)
+![Matrix-style green heart preview](heart_preview.png)
 
 ## Table Of Contents
 
@@ -12,7 +12,7 @@ This repository keeps the Pi lightweight: no LightDM, no full desktop, and no pe
 - [What This Provides](#what-this-provides)
 - [Repository Layout](#repository-layout)
 - [Quick Start](#quick-start)
-- [Animation Demo](#animation-demo)
+- [Matrix-Style Demos](#matrix-style-demos)
 - [Fresh Display Setup](#fresh-display-setup)
 - [On-Demand X11 Runtime](#on-demand-x11-runtime)
 - [Running GUI Apps](#running-gui-apps)
@@ -42,8 +42,8 @@ This repository keeps the Pi lightweight: no LightDM, no full desktop, and no pe
 - Maps `tty1` to the LCD framebuffer with `con2fbmap`.
 - Adds an on-demand X11 launcher for GUI applications.
 - Adds ADS7846 touchscreen calibration for X11.
-- Provides a pygame heart demo for display testing.
-- Provides an animated pygame demo for motion/performance testing.
+- Provides a Matrix-style green pygame heart demo for display testing.
+- Provides a Matrix-style animated pygame demo for motion/performance testing.
 - Provides a pygame touch tester for coordinate verification.
 - Avoids enabling a permanent desktop environment.
 
@@ -55,10 +55,10 @@ This repository keeps the Pi lightweight: no LightDM, no full desktop, and no pe
 | `install_lcd_x11_on_demand.sh` | Installs the X11 framebuffer runtime used by temporary GUI sessions. |
 | `install_touch_calibration.sh` | Installs ADS7846 touchscreen calibration for X11. |
 | `lcd-run.sh` | Runs a command on the LCD through temporary X11 or direct framebuffer mode. |
-| `run_heart_waveshare28a.sh` | Convenience launcher for the pygame heart demo. |
+| `run_heart_waveshare28a.sh` | Convenience launcher for the Matrix-style pygame heart demo. |
 | `run_animation_waveshare28a.sh` | Convenience launcher for the animated pygame demo. |
-| `heart_display.py` | Pygame display test app. |
-| `heart_animation.py` | Pygame animated heart, orbit, and wave demo. |
+| `heart_display.py` | Matrix-style green pygame display test app. |
+| `heart_animation.py` | Matrix-style green animated heart, orbit, and code rain demo. |
 | `touch_test.py` | Pygame touch coordinate test app. |
 | `heart_preview.png` | Offscreen-rendered preview of the heart demo. |
 | `animation_preview.png` | Offscreen-rendered preview frame of the animation demo. |
@@ -89,31 +89,65 @@ Run the display demo:
 Run a short 10-second test:
 
 ```bash
-DURATION=10 ./run_heart_waveshare28a.sh
+duration=10 ./run_heart_waveshare28a.sh
 ```
 
 If the display size must be forced, use the current framebuffer size:
 
 ```bash
-SIZE=320x240 DURATION=10 ./run_heart_waveshare28a.sh
+SIZE=320x240 duration=10 ./run_heart_waveshare28a.sh
 ```
 
 Run the animation demo:
 
 ```bash
-DURATION=10 ./run_animation_waveshare28a.sh
+duration=10 ./run_animation_waveshare28a.sh
 ```
 
-## Animation Demo
+## Matrix-Style Demos
+
+The demos use a black-and-green Matrix-style visual treatment: digital code rain, neon green heart shapes, dark shadows, and bright green highlights.
+
+### Static Green Heart
+
+`heart_display.py` renders a centered neon green heart over a Matrix-style digital rain background.
+
+![Matrix-style green heart preview](heart_preview.png)
+
+Recommended command:
+
+```bash
+./run_heart_waveshare28a.sh
+```
+
+Short test:
+
+```bash
+duration=10 ./run_heart_waveshare28a.sh
+```
+
+Force the verified Waveshare framebuffer size:
+
+```bash
+SIZE=320x240 duration=10 ./run_heart_waveshare28a.sh
+```
+
+Save one rendered frame without using the LCD:
+
+```bash
+python3 heart_display.py --sdl-driver=offscreen --size 240x320 --duration 0.1 --save heart_preview.png
+```
+
+### Animated Green Heart
 
 `heart_animation.py` is a lightweight pygame animation for checking that the on-demand X11 path can render moving graphics smoothly on the Waveshare LCD. It draws:
 
-![Animation preview](animation_preview.png)
+![Matrix-style green animation preview](animation_preview.png)
 
-- a moving gradient background,
-- animated wave lines,
+- animated digital code rain,
+- green wave lines,
 - orbiting dots,
-- a pulsing heart,
+- a pulsing neon green heart,
 - a small elapsed-time label.
 
 Recommended command:
@@ -125,19 +159,19 @@ Recommended command:
 Short test:
 
 ```bash
-DURATION=10 ./run_animation_waveshare28a.sh
+duration=10 ./run_animation_waveshare28a.sh
 ```
 
 Force the verified Waveshare framebuffer size:
 
 ```bash
-SIZE=320x240 DURATION=10 ./run_animation_waveshare28a.sh
+SIZE=320x240 duration=10 ./run_animation_waveshare28a.sh
 ```
 
 Lower the frame rate if the Pi is busy:
 
 ```bash
-FPS=15 DURATION=10 ./run_animation_waveshare28a.sh
+FPS=15 duration=10 ./run_animation_waveshare28a.sh
 ```
 
 Run it directly through the generic launcher:
@@ -357,7 +391,7 @@ Use temporary X11 mode instead:
 If you still want to test direct framebuffer mode:
 
 ```bash
-sudo RUN_MODE=fb SDL_DRIVER=kmsdrm DURATION=10 ./run_heart_waveshare28a.sh
+sudo env RUN_MODE=fb SDL_DRIVER=kmsdrm duration=10 ./run_heart_waveshare28a.sh
 ```
 
 Framebuffer mode targets:
@@ -382,7 +416,7 @@ python3 heart_display.py --sdl-driver=offscreen --size 240x320 --duration 0.1 --
 | `RUN_MODE` | `x` | `x` for temporary X11, `fb` for direct framebuffer mode. |
 | `SDL_DRIVER` | `auto` | SDL driver used in framebuffer mode, for example `kmsdrm`. |
 | `SIZE` | unset | Optional forced render size, for example `320x240`. |
-| `DURATION` | `0` | Demo duration in seconds. `0` waits until quit. |
+| `duration` | `0` | Demo duration in seconds. `0` waits until quit. `DURATION` is still accepted as a compatibility alias. |
 | `FPS` | `30` | Animation frame rate used by `run_animation_waveshare28a.sh`. |
 | `PYTHON_BIN` | `python3` | Python interpreter used by `run_heart_waveshare28a.sh`. |
 | `DISPLAY_NUM` | `:1` | Temporary X11 display number used by `lcd-run.sh x`. |

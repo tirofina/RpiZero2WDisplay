@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Animated pygame display demo for the Waveshare LCD."""
+"""Matrix-style animated pygame display demo for the Waveshare LCD."""
 
 from __future__ import annotations
 
@@ -40,14 +40,15 @@ if not has_graphics_session and not has_framebuffer and not os.path.exists("/dev
 import pygame
 
 
-BG_TOP = (12, 16, 23)
-BG_BOTTOM = (29, 38, 48)
-HEART = (238, 38, 88)
-HEART_DARK = (132, 14, 48)
-HEART_LIGHT = (255, 120, 158)
-CYAN = (80, 210, 230)
-AMBER = (245, 190, 76)
-WHITE = (242, 246, 250)
+BLACK = (0, 4, 2)
+MATRIX_DIM = (0, 58, 24)
+MATRIX_GREEN = (0, 220, 88)
+MATRIX_BRIGHT = (190, 255, 210)
+HEART = (0, 245, 92)
+HEART_DARK = (0, 74, 34)
+HEART_LIGHT = (176, 255, 196)
+WHITE = MATRIX_BRIGHT
+MATRIX_CHARS = "0101011010010110"
 
 
 def parse_size(value: str) -> tuple[int, int]:
@@ -85,15 +86,27 @@ def heart_points(center: tuple[int, int], scale: float) -> list[tuple[int, int]]
     return points
 
 
-def draw_background(surface: pygame.Surface, elapsed: float) -> None:
+def draw_background(surface: pygame.Surface, font: pygame.font.Font, elapsed: float) -> None:
     width, height = surface.get_size()
-    phase = math.sin(elapsed * 0.85) * 0.5 + 0.5
-    top = mix(BG_TOP, (18, 28, 36), phase)
-    bottom = mix(BG_BOTTOM, (38, 30, 48), 1.0 - phase)
+    surface.fill(BLACK)
 
-    for y in range(height):
-        t = y / max(1, height - 1)
-        pygame.draw.line(surface, mix(top, bottom, t), (0, y), (width, y))
+    cell_h = max(12, font.get_height())
+    cell_w = max(9, font.size("0")[0] + 4)
+
+    for col, x in enumerate(range(0, width, cell_w)):
+        speed = 24 + (col * 13) % 46
+        offset = int(elapsed * speed + col * cell_h * 3) % (height + cell_h * 8)
+        for trail in range(12):
+            y = offset - trail * cell_h
+            if y < -cell_h or y >= height:
+                continue
+            idx = (col * 17 + trail * 5 + int(elapsed * 9)) % len(MATRIX_CHARS)
+            intensity = max(0.0, 1.0 - trail / 12)
+            color = mix(MATRIX_DIM, MATRIX_GREEN, 0.25 + intensity * 0.6)
+            if trail == 0:
+                color = MATRIX_BRIGHT
+            rendered = font.render(MATRIX_CHARS[idx], True, color)
+            surface.blit(rendered, (x, y))
 
     for row in range(5):
         y = round((row + 0.8) * height / 5)
@@ -102,7 +115,7 @@ def draw_background(surface: pygame.Surface, elapsed: float) -> None:
         for x in range(-8, width + 9, 8):
             wave = math.sin(x * 0.045 + elapsed * (1.5 + row * 0.18) + row)
             points.append((x, round(y + wave * amplitude)))
-        color = mix((35, 70, 82), (66, 72, 98), row / 4)
+        color = mix((0, 45, 20), (0, 130, 56), row / 4)
         pygame.draw.lines(surface, color, False, points, 1)
 
 
@@ -118,7 +131,7 @@ def draw_orbit(surface: pygame.Surface, elapsed: float) -> None:
         x = round(cx + math.cos(angle) * radius_x)
         y = round(cy + math.sin(angle) * radius_y)
         size = round(2 + depth * 4)
-        color = mix(CYAN, AMBER, depth)
+        color = mix(MATRIX_GREEN, MATRIX_BRIGHT, depth)
         pygame.draw.circle(surface, color, (x, y), size)
 
 
@@ -136,7 +149,9 @@ def draw_heart(surface: pygame.Surface, elapsed: float) -> None:
     points = heart_points(center, scale)
 
     shadow = [(x + round(scale * 0.75), y + round(scale * 0.95)) for x, y in points]
-    pygame.draw.polygon(large, (0, 0, 0, 95), shadow)
+    glow = heart_points(center, scale * 1.10)
+    pygame.draw.polygon(large, (0, 255, 95, 42), glow)
+    pygame.draw.polygon(large, (0, 0, 0, 130), shadow)
     pygame.draw.polygon(large, HEART_DARK, points)
     pygame.draw.polygon(large, HEART, heart_points(center, scale * 0.92))
 
@@ -148,7 +163,7 @@ def draw_heart(surface: pygame.Surface, elapsed: float) -> None:
     pygame.draw.ellipse(large, HEART_LIGHT, shine)
 
     pulse_radius = round(min(width, height) * render_scale * (0.36 + 0.05 * math.sin(elapsed * math.tau)))
-    pygame.draw.circle(large, (255, 70, 120, 45), center, pulse_radius, max(2, render_scale))
+    pygame.draw.circle(large, (0, 255, 95, 55), center, pulse_radius, max(2, render_scale))
 
     smooth = pygame.transform.smoothscale(large, (width, height))
     surface.blit(smooth, (0, 0))
@@ -213,7 +228,7 @@ def main() -> int:
                 pygame.quit()
                 return 0
 
-        draw_background(screen, elapsed)
+        draw_background(screen, font, elapsed)
         draw_orbit(screen, elapsed)
         draw_heart(screen, elapsed)
         draw_label(screen, font, elapsed)

@@ -6,7 +6,7 @@ PYTHON_BIN="${PYTHON_BIN:-python3}"
 FBDEV="${FBDEV:-/dev/fb1}"
 RUN_MODE="${RUN_MODE:-x}"
 SDL_DRIVER="${SDL_DRIVER:-auto}"
-DURATION="${DURATION:-0}"
+duration="${duration:-${DURATION:-0}}"
 SIZE="${SIZE:-}"
 FPS="${FPS:-30}"
 
@@ -24,7 +24,7 @@ fi
 args=(
   "${SCRIPT_DIR}/heart_animation.py"
   --fbdev "$FBDEV"
-  --duration "$DURATION"
+  --duration "$duration"
   --fps "$FPS"
 )
 

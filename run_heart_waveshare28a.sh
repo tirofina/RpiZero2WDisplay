@@ -6,7 +6,7 @@ PYTHON_BIN="${PYTHON_BIN:-python3}"
 FBDEV="${FBDEV:-/dev/fb1}"
 RUN_MODE="${RUN_MODE:-x}"
 SDL_DRIVER="${SDL_DRIVER:-auto}"
-DURATION="${DURATION:-0}"
+duration="${duration:-${DURATION:-0}}"
 SIZE="${SIZE:-}"
 
 if [[ ! -e "$FBDEV" ]]; then
@@ -23,7 +23,7 @@ fi
 args=(
   "${SCRIPT_DIR}/heart_display.py"
   --fbdev "$FBDEV"
-  --duration "$DURATION"
+  --duration "$duration"
 )
 
 if [[ "$SDL_DRIVER" != "auto" && -n "$SDL_DRIVER" ]]; then
