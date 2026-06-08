@@ -12,6 +12,7 @@ This repository keeps the Pi lightweight: no LightDM, no full desktop, and no pe
 - [What This Provides](#what-this-provides)
 - [Repository Layout](#repository-layout)
 - [Quick Start](#quick-start)
+- [Animation Demo](#animation-demo)
 - [Fresh Display Setup](#fresh-display-setup)
 - [On-Demand X11 Runtime](#on-demand-x11-runtime)
 - [Running GUI Apps](#running-gui-apps)
@@ -42,6 +43,7 @@ This repository keeps the Pi lightweight: no LightDM, no full desktop, and no pe
 - Adds an on-demand X11 launcher for GUI applications.
 - Adds ADS7846 touchscreen calibration for X11.
 - Provides a pygame heart demo for display testing.
+- Provides an animated pygame demo for motion/performance testing.
 - Provides a pygame touch tester for coordinate verification.
 - Avoids enabling a permanent desktop environment.
 
@@ -54,9 +56,12 @@ This repository keeps the Pi lightweight: no LightDM, no full desktop, and no pe
 | `install_touch_calibration.sh` | Installs ADS7846 touchscreen calibration for X11. |
 | `lcd-run.sh` | Runs a command on the LCD through temporary X11 or direct framebuffer mode. |
 | `run_heart_waveshare28a.sh` | Convenience launcher for the pygame heart demo. |
+| `run_animation_waveshare28a.sh` | Convenience launcher for the animated pygame demo. |
 | `heart_display.py` | Pygame display test app. |
+| `heart_animation.py` | Pygame animated heart, orbit, and wave demo. |
 | `touch_test.py` | Pygame touch coordinate test app. |
 | `heart_preview.png` | Offscreen-rendered preview of the heart demo. |
+| `animation_preview.png` | Offscreen-rendered preview frame of the animation demo. |
 
 ## Quick Start
 
@@ -91,6 +96,60 @@ If the display size must be forced, use the current framebuffer size:
 
 ```bash
 SIZE=320x240 DURATION=10 ./run_heart_waveshare28a.sh
+```
+
+Run the animation demo:
+
+```bash
+DURATION=10 ./run_animation_waveshare28a.sh
+```
+
+## Animation Demo
+
+`heart_animation.py` is a lightweight pygame animation for checking that the on-demand X11 path can render moving graphics smoothly on the Waveshare LCD. It draws:
+
+![Animation preview](animation_preview.png)
+
+- a moving gradient background,
+- animated wave lines,
+- orbiting dots,
+- a pulsing heart,
+- a small elapsed-time label.
+
+Recommended command:
+
+```bash
+./run_animation_waveshare28a.sh
+```
+
+Short test:
+
+```bash
+DURATION=10 ./run_animation_waveshare28a.sh
+```
+
+Force the verified Waveshare framebuffer size:
+
+```bash
+SIZE=320x240 DURATION=10 ./run_animation_waveshare28a.sh
+```
+
+Lower the frame rate if the Pi is busy:
+
+```bash
+FPS=15 DURATION=10 ./run_animation_waveshare28a.sh
+```
+
+Run it directly through the generic launcher:
+
+```bash
+./lcd-run.sh x python3 heart_animation.py --size 320x240 --duration 10
+```
+
+Save one rendered frame without using the LCD:
+
+```bash
+python3 heart_animation.py --sdl-driver=offscreen --size 320x240 --duration 0.2 --save-frame animation_preview.png
 ```
 
 ## Fresh Display Setup
@@ -182,6 +241,7 @@ Examples:
 
 ```bash
 ./lcd-run.sh x python3 heart_display.py
+./lcd-run.sh x python3 heart_animation.py --size 320x240
 ./lcd-run.sh x python3 touch_test.py --size 320x240
 ./lcd-run.sh x python3 camera_gui.py
 ./lcd-run.sh x python3 opencv_preview.py
@@ -323,6 +383,7 @@ python3 heart_display.py --sdl-driver=offscreen --size 240x320 --duration 0.1 --
 | `SDL_DRIVER` | `auto` | SDL driver used in framebuffer mode, for example `kmsdrm`. |
 | `SIZE` | unset | Optional forced render size, for example `320x240`. |
 | `DURATION` | `0` | Demo duration in seconds. `0` waits until quit. |
+| `FPS` | `30` | Animation frame rate used by `run_animation_waveshare28a.sh`. |
 | `PYTHON_BIN` | `python3` | Python interpreter used by `run_heart_waveshare28a.sh`. |
 | `DISPLAY_NUM` | `:1` | Temporary X11 display number used by `lcd-run.sh x`. |
 
