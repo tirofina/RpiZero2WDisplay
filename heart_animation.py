@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import math
 import os
+import random
 import sys
 import time
 
@@ -41,14 +42,16 @@ import pygame
 
 
 BLACK = (0, 4, 2)
-MATRIX_DIM = (0, 58, 24)
-MATRIX_GREEN = (0, 220, 88)
+MATRIX_DIM = (0, 42, 18)
+MATRIX_MID = (0, 130, 52)
+MATRIX_GREEN = (0, 230, 92)
 MATRIX_BRIGHT = (190, 255, 210)
-HEART = (0, 245, 92)
 HEART_DARK = (0, 74, 34)
-HEART_LIGHT = (176, 255, 196)
-WHITE = MATRIX_BRIGHT
-MATRIX_CHARS = "0101011010010110"
+MATRIX_WHITE = (222, 255, 226)
+WHITE = MATRIX_WHITE
+MATRIX_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ#$%&*@+-/"
+GLITCH_CYAN = (68, 255, 220)
+GLITCH_PURPLE = (98, 18, 92)
 
 
 def parse_size(value: str) -> tuple[int, int]:
@@ -75,6 +78,130 @@ def mix(a: tuple[int, int, int], b: tuple[int, int, int], t: float) -> tuple[int
     return tuple(round(a[i] * (1.0 - t) + b[i] * t) for i in range(3))
 
 
+def matrix_font(size: int, bold: bool = False) -> pygame.font.Font:
+    for name in ("dejavusansmono", "liberationmono", "monospace"):
+        font = pygame.font.SysFont(name, size, bold=bold)
+        if font:
+            return font
+    return pygame.font.Font(None, size)
+
+
+def blit_text(
+    surface: pygame.Surface,
+    font: pygame.font.Font,
+    text: str,
+    pos: tuple[int, int],
+    color: tuple[int, int, int],
+    alpha: int,
+) -> None:
+    rendered = font.render(text, True, color)
+    rendered.set_alpha(max(0, min(255, alpha)))
+    surface.blit(rendered, pos)
+
+
+def draw_code_rain(
+    surface: pygame.Surface,
+    font: pygame.font.Font,
+    seed: int,
+    elapsed: float,
+    alpha_scale: float = 1.0,
+    speed_boost: float = 1.0,
+) -> None:
+    width, height = surface.get_size()
+    cell_h = max(10, font.get_height())
+    cell_w = max(8, font.size("W")[0] + 2)
+
+    for col, x in enumerate(range(0, width, cell_w)):
+        rng = random.Random(seed + col * 7919)
+        trail = rng.randint(8, 24)
+        speed = rng.uniform(20.0, 82.0) * speed_boost
+        phase = rng.uniform(0.0, height + trail * cell_h)
+        head = int((phase + elapsed * speed) % (height + trail * cell_h)) - trail * cell_h
+        mutate_rate = rng.uniform(8.0, 22.0)
+
+        for row in range(trail):
+            y = head - row * cell_h
+            if y < -cell_h or y >= height:
+                continue
+
+            tick = int(elapsed * mutate_rate)
+            idx = (rng.randint(0, 9999) + row * 11 + tick * (col % 5 + 1)) % len(MATRIX_CHARS)
+            char = MATRIX_CHARS[idx]
+            strength = max(0.0, 1.0 - row / max(1, trail - 1))
+            color = mix(MATRIX_DIM, MATRIX_GREEN, 0.25 + strength * 0.58)
+            alpha = round((42 + strength * 180) * alpha_scale)
+            if row == 0:
+                color = MATRIX_WHITE
+                alpha = round(245 * alpha_scale)
+            blit_text(surface, font, char, (x, y), color, alpha)
+
+
+def apply_glitch(surface: pygame.Surface, elapsed: float, seed: int, intensity: float) -> None:
+    width, height = surface.get_size()
+    source = surface.copy()
+    rng = random.Random(seed + int(elapsed * 18))
+    band_count = max(2, round(5 * intensity))
+    max_shift = max(1, round(width * 0.018 * intensity))
+
+    for _ in range(band_count):
+        band_h = rng.randint(1, max(2, height // 44))
+        y = rng.randint(0, max(0, height - band_h))
+        shift = rng.choice((-1, 1)) * rng.randint(1, max_shift)
+        src = pygame.Rect(0, y, width, band_h)
+        surface.blit(source, (shift, y), src)
+
+        tint = pygame.Surface((width, band_h), pygame.SRCALPHA)
+        if rng.random() < 0.58:
+            tint.fill((*GLITCH_CYAN, rng.randint(8, 20)))
+        else:
+            tint.fill((*GLITCH_PURPLE, rng.randint(7, 16)))
+        surface.blit(tint, (0, y))
+
+        if rng.random() < 0.48:
+            line_y = y + rng.randrange(band_h)
+            line = pygame.Surface((width, 1), pygame.SRCALPHA)
+            line.fill((*MATRIX_WHITE, rng.randint(38, 86)))
+            surface.blit(line, (0, line_y))
+
+
+def draw_monitor_overlay(surface: pygame.Surface, elapsed: float, seed: int) -> None:
+    width, height = surface.get_size()
+    overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+    flicker = 0.86 + 0.14 * math.sin(elapsed * 37.0)
+
+    for y in range(0, height, 3):
+        overlay.fill((0, 0, 0, round(38 * flicker)), (0, y, width, 1))
+    for y in range(1, height, 6):
+        pygame.draw.line(overlay, (0, 255, 95, 14), (0, y), (width, y), 1)
+    for x in range(0, width, 3):
+        pygame.draw.line(overlay, (0, 255, 95, 8), (x, 0), (x, height), 1)
+
+    rng = random.Random(seed + int(elapsed * 24))
+    specks = max(90, width * height // 820)
+    for _ in range(specks):
+        x = rng.randrange(width)
+        y = rng.randrange(height)
+        value = rng.randint(38, 150)
+        overlay.set_at((x, y), (0, value, 44, rng.randint(16, 48)))
+
+    edge_steps = max(16, min(width, height) // 8)
+    for i in range(edge_steps):
+        alpha = round(((edge_steps - i) / edge_steps) ** 2 * 18)
+        inner_w = width - i * 2
+        inner_h = height - i * 2
+        if inner_w <= 0 or inner_h <= 0:
+            break
+        overlay.fill((0, 0, 0, alpha), (i, i, inner_w, 1))
+        overlay.fill((0, 0, 0, alpha), (i, height - i - 1, inner_w, 1))
+        overlay.fill((0, 0, 0, alpha), (i, i, 1, inner_h))
+        overlay.fill((0, 0, 0, alpha), (width - i - 1, i, 1, inner_h))
+
+    border = pygame.Rect(1, 1, width - 2, height - 2)
+    pygame.draw.rect(overlay, (0, 255, 95, 42), border, 1, border_radius=max(8, min(width, height) // 18))
+    pygame.draw.rect(overlay, (0, 0, 0, 96), border, 2, border_radius=max(8, min(width, height) // 18))
+    surface.blit(overlay, (0, 0))
+
+
 def heart_points(center: tuple[int, int], scale: float) -> list[tuple[int, int]]:
     cx, cy = center
     points: list[tuple[int, int]] = []
@@ -89,50 +216,13 @@ def heart_points(center: tuple[int, int], scale: float) -> list[tuple[int, int]]
 def draw_background(surface: pygame.Surface, font: pygame.font.Font, elapsed: float) -> None:
     width, height = surface.get_size()
     surface.fill(BLACK)
+    draw_code_rain(surface, font, seed=2027, elapsed=elapsed, alpha_scale=0.82)
 
-    cell_h = max(12, font.get_height())
-    cell_w = max(9, font.size("0")[0] + 4)
-
-    for col, x in enumerate(range(0, width, cell_w)):
-        speed = 24 + (col * 13) % 46
-        offset = int(elapsed * speed + col * cell_h * 3) % (height + cell_h * 8)
-        for trail in range(12):
-            y = offset - trail * cell_h
-            if y < -cell_h or y >= height:
-                continue
-            idx = (col * 17 + trail * 5 + int(elapsed * 9)) % len(MATRIX_CHARS)
-            intensity = max(0.0, 1.0 - trail / 12)
-            color = mix(MATRIX_DIM, MATRIX_GREEN, 0.25 + intensity * 0.6)
-            if trail == 0:
-                color = MATRIX_BRIGHT
-            rendered = font.render(MATRIX_CHARS[idx], True, color)
-            surface.blit(rendered, (x, y))
-
-    for row in range(5):
-        y = round((row + 0.8) * height / 5)
-        amplitude = max(5, height * 0.035)
-        points = []
-        for x in range(-8, width + 9, 8):
-            wave = math.sin(x * 0.045 + elapsed * (1.5 + row * 0.18) + row)
-            points.append((x, round(y + wave * amplitude)))
-        color = mix((0, 45, 20), (0, 130, 56), row / 4)
-        pygame.draw.lines(surface, color, False, points, 1)
-
-
-def draw_orbit(surface: pygame.Surface, elapsed: float) -> None:
-    width, height = surface.get_size()
-    cx, cy = width // 2, height // 2
-    radius_x = width * 0.34
-    radius_y = height * 0.25
-
-    for i in range(12):
-        angle = elapsed * 1.4 + i * math.tau / 12
-        depth = math.sin(angle) * 0.5 + 0.5
-        x = round(cx + math.cos(angle) * radius_x)
-        y = round(cy + math.sin(angle) * radius_y)
-        size = round(2 + depth * 4)
-        color = mix(MATRIX_GREEN, MATRIX_BRIGHT, depth)
-        pygame.draw.circle(surface, color, (x, y), size)
+    for row in range(6):
+        y = round((row + 0.55) * height / 6)
+        jitter = round(math.sin(elapsed * 11.0 + row * 1.7) * 4)
+        color = mix((0, 28, 12), (0, 96, 42), row / 5)
+        pygame.draw.line(surface, color, (0, y + jitter), (width, y - jitter), 1)
 
 
 def draw_heart(surface: pygame.Surface, elapsed: float) -> None:
@@ -147,23 +237,31 @@ def draw_heart(surface: pygame.Surface, elapsed: float) -> None:
     )
     scale = min(width, height) * render_scale / 40 * beat
     points = heart_points(center, scale)
+    inner = heart_points(center, scale * 0.93)
+    outline_width = max(3, round(scale * 0.32))
 
     shadow = [(x + round(scale * 0.75), y + round(scale * 0.95)) for x, y in points]
     glow = heart_points(center, scale * 1.10)
     pygame.draw.polygon(large, (0, 255, 95, 42), glow)
+    pygame.draw.lines(large, (0, 255, 95, 75), True, glow, max(2, outline_width * 2))
     pygame.draw.polygon(large, (0, 0, 0, 130), shadow)
     pygame.draw.polygon(large, HEART_DARK, points)
-    pygame.draw.polygon(large, HEART, heart_points(center, scale * 0.92))
 
-    shine = pygame.Rect(0, 0, round(width * 0.20 * render_scale), round(height * 0.13 * render_scale))
-    shine.center = (
-        center[0] - round(width * 0.10 * render_scale),
-        center[1] - round(height * 0.12 * render_scale),
-    )
-    pygame.draw.ellipse(large, HEART_LIGHT, shine)
+    mask = pygame.Surface(large.get_size(), pygame.SRCALPHA)
+    pygame.draw.polygon(mask, (255, 255, 255, 255), inner)
+    heart_material = pygame.Surface(large.get_size(), pygame.SRCALPHA)
+    pygame.draw.polygon(heart_material, (0, 18, 8, 235), inner)
+    heart_font = matrix_font(max(13, round(scale * 1.1)), bold=True)
+    draw_code_rain(heart_material, heart_font, seed=4049, elapsed=elapsed * 1.35, alpha_scale=1.0, speed_boost=1.25)
+    heart_material.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    large.blit(heart_material, (0, 0))
 
     pulse_radius = round(min(width, height) * render_scale * (0.36 + 0.05 * math.sin(elapsed * math.tau)))
     pygame.draw.circle(large, (0, 255, 95, 55), center, pulse_radius, max(2, render_scale))
+    for offset in range(0, outline_width * 3, max(1, outline_width)):
+        pygame.draw.lines(large, (0, 255, 95, max(28, 125 - offset * 16)), True, points, outline_width + offset)
+    pygame.draw.lines(large, MATRIX_BRIGHT, True, heart_points(center, scale * 0.96), max(2, outline_width // 2))
+    pygame.draw.lines(large, MATRIX_MID, True, inner, max(1, outline_width // 3))
 
     smooth = pygame.transform.smoothscale(large, (width, height))
     surface.blit(smooth, (0, 0))
@@ -201,7 +299,7 @@ def main() -> int:
     flags = 0 if args.windowed or driver == "offscreen" else pygame.FULLSCREEN
     screen = pygame.display.set_mode((width, height), flags)
     pygame.display.set_caption("Heart Animation")
-    font = pygame.font.Font(None, max(18, min(width, height) // 11))
+    font = matrix_font(max(18, min(width, height) // 11), bold=True)
 
     print(f"SDL driver: {driver}")
     print(f"Detected desktop size: {detected_size[0]}x{detected_size[1]}")
@@ -229,9 +327,10 @@ def main() -> int:
                 return 0
 
         draw_background(screen, font, elapsed)
-        draw_orbit(screen, elapsed)
         draw_heart(screen, elapsed)
         draw_label(screen, font, elapsed)
+        apply_glitch(screen, elapsed, seed=9091, intensity=0.42)
+        draw_monitor_overlay(screen, elapsed, seed=5051)
         pygame.display.flip()
 
         if args.duration > 0 and elapsed >= args.duration:
