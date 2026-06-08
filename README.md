@@ -1,102 +1,232 @@
 # RpiZero2WDisplay
 
-Raspberry Pi Zero 2 W에서 Waveshare 2.8inch RPi LCD (A)를 DietPi CLI 환경으로 유지하면서, 필요한 Python/카메라 코드만 LCD에 띄우기 위한 스크립트 모음입니다.
+On-demand display and touch tooling for a **Raspberry Pi Zero 2 W** running **DietPi CLI mode** with a **Waveshare 2.8inch RPi LCD (A)**.
 
-검증된 현재 구성:
+This repository keeps the Pi lightweight: no LightDM, no full desktop, and no permanent GUI session. Python, camera, pygame, OpenCV, tkinter, Qt, or matplotlib apps can be launched on the LCD only when needed.
 
-- Board: Raspberry Pi Zero 2 W
-- OS: DietPi / Debian Trixie
-- LCD: Waveshare 2.8inch RPi LCD (A), `waveshare28a-v2`
-- Framebuffer: `/dev/fb1`
-- X11 detected size: `320x240`
-- Touch: `ADS7846 Touchscreen`
-- GUI policy: Desktop/LightDM 상시 실행 없음, 필요할 때만 임시 X11 실행
+![Heart preview](heart_preview.png)
 
-## Files
+## Table Of Contents
 
-- `setup_waveshare28a_display.sh`: boot overlay, SPI, ADS7846, tty1 to fb1, autologin setup.
-- `install_lcd_x11_on_demand.sh`: temporary X11 framebuffer runtime setup.
-- `install_touch_calibration.sh`: ADS7846 touch calibration setup for X11.
-- `lcd-run.sh`: run a command on the LCD through direct framebuffer or temporary X11.
-- `run_heart_waveshare28a.sh`: run the pygame heart demo on the LCD.
-- `heart_display.py`: pygame heart demo.
-- `touch_test.py`: pygame touch coordinate test.
-- `heart_preview.png`: rendered preview image.
+- [Tested Setup](#tested-setup)
+- [What This Provides](#what-this-provides)
+- [Repository Layout](#repository-layout)
+- [Quick Start](#quick-start)
+- [Fresh Display Setup](#fresh-display-setup)
+- [On-Demand X11 Runtime](#on-demand-x11-runtime)
+- [Running GUI Apps](#running-gui-apps)
+- [Touchscreen Calibration](#touchscreen-calibration)
+- [Direct Framebuffer Mode](#direct-framebuffer-mode)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
 
-## Install Display Setup
+## Tested Setup
 
-Use this only when preparing a fresh DietPi image for the Waveshare LCD.
+| Component | Value |
+| --- | --- |
+| Board | Raspberry Pi Zero 2 W |
+| OS | DietPi / Debian Trixie |
+| Display | Waveshare 2.8inch RPi LCD (A) |
+| Overlay | `waveshare28a-v2` |
+| LCD framebuffer | `/dev/fb1` |
+| X11 detected size | `320x240` |
+| Touch controller | `ADS7846 Touchscreen` |
+| Touch driver | `evdev` |
+| GUI strategy | Temporary X11 session only when a command needs the screen |
+
+## What This Provides
+
+- Installs and configures the Waveshare 2.8A overlay.
+- Keeps DietPi in CLI/CUI mode.
+- Maps `tty1` to the LCD framebuffer with `con2fbmap`.
+- Adds an on-demand X11 launcher for GUI applications.
+- Adds ADS7846 touchscreen calibration for X11.
+- Provides a pygame heart demo for display testing.
+- Provides a pygame touch tester for coordinate verification.
+- Avoids enabling a permanent desktop environment.
+
+## Repository Layout
+
+| Path | Purpose |
+| --- | --- |
+| `setup_waveshare28a_display.sh` | Full boot/display setup for a fresh DietPi image. |
+| `install_lcd_x11_on_demand.sh` | Installs the X11 framebuffer runtime used by temporary GUI sessions. |
+| `install_touch_calibration.sh` | Installs ADS7846 touchscreen calibration for X11. |
+| `lcd-run.sh` | Runs a command on the LCD through temporary X11 or direct framebuffer mode. |
+| `run_heart_waveshare28a.sh` | Convenience launcher for the pygame heart demo. |
+| `heart_display.py` | Pygame display test app. |
+| `touch_test.py` | Pygame touch coordinate test app. |
+| `heart_preview.png` | Offscreen-rendered preview of the heart demo. |
+
+## Quick Start
+
+Clone the repository on the Pi:
+
+```bash
+cd /home/dietpi
+git clone git@github.com:tirofina/RpiZero2WDisplay.git
+cd RpiZero2WDisplay
+```
+
+If the Waveshare overlay has already been configured and `/dev/fb1` exists, install only the on-demand GUI runtime and touch calibration:
+
+```bash
+sudo ./install_lcd_x11_on_demand.sh
+sudo ./install_touch_calibration.sh
+```
+
+Run the display demo:
+
+```bash
+./run_heart_waveshare28a.sh
+```
+
+Run a short 10-second test:
+
+```bash
+DURATION=10 ./run_heart_waveshare28a.sh
+```
+
+If the display size must be forced, use the current framebuffer size:
+
+```bash
+SIZE=320x240 DURATION=10 ./run_heart_waveshare28a.sh
+```
+
+## Fresh Display Setup
+
+Use this section when preparing a new DietPi image for the Waveshare LCD.
 
 ```bash
 cd /home/dietpi/RpiZero2WDisplay
 sudo bash setup_waveshare28a_display.sh
 ```
 
-Useful options:
+Common options:
 
 ```bash
 sudo bash setup_waveshare28a_display.sh --rotate 90
 sudo bash setup_waveshare28a_display.sh --no-reboot
 sudo bash setup_waveshare28a_display.sh --user dietpi
+sudo bash setup_waveshare28a_display.sh --no-autologin
+sudo bash setup_waveshare28a_display.sh --no-con2fbmap
 ```
 
-The setup keeps DietPi in CLI mode. It does not enable LightDM or a full desktop.
+The setup script:
 
-## Install On-Demand X11
+1. Installs DietPi/Trixie-compatible display packages.
+2. Downloads and installs `waveshare28a-v2.dtbo`.
+3. Enables SPI.
+4. Configures the Waveshare LCD overlay.
+5. Configures the ADS7846 touch overlay.
+6. Disables KMS/FKMS overlays that conflict with this framebuffer setup.
+7. Adds `consoleblank=0`.
+8. Writes X11 touch calibration.
+9. Maps `tty1` to `fb1` using `con2fbmap`.
+10. Optionally enables `tty1` autologin.
 
-Run this once after the display setup:
+The script writes backups under:
+
+```text
+/var/backups/waveshare28a-setup/
+```
+
+Logs are written under:
+
+```text
+/var/log/waveshare28a-setup/
+```
+
+## On-Demand X11 Runtime
+
+The recommended path for this device is a temporary X11 session. This avoids running a desktop all the time while still supporting GUI programs that need X11.
+
+Install the runtime once:
 
 ```bash
-cd /home/dietpi/RpiZero2WDisplay
 sudo ./install_lcd_x11_on_demand.sh
-sudo ./install_touch_calibration.sh
 ```
 
-This installs the X11 framebuffer driver, `xinput`, `evdev`, and the ADS7846 calibration file.
+This installs:
 
-## Run The Heart Demo
+- `xserver-xorg`
+- `xinit`
+- `x11-xserver-utils`
+- `xserver-xorg-video-fbdev`
+- `xserver-xorg-input-evdev`
+- `xinput`
+- `xinput-calibrator`
+- `openbox`
 
-Recommended command:
+It also writes:
+
+```text
+/etc/X11/xorg.conf.d/98-waveshare28a-fbdev.conf
+```
+
+That file points X11 at:
+
+```text
+/dev/fb1
+```
+
+## Running GUI Apps
+
+Use `lcd-run.sh x` for programs that require X11:
 
 ```bash
-cd /home/dietpi/RpiZero2WDisplay
-./run_heart_waveshare28a.sh
+./lcd-run.sh x COMMAND [ARGS...]
 ```
 
-For a short test:
+Examples:
 
 ```bash
-DURATION=10 ./run_heart_waveshare28a.sh
+./lcd-run.sh x python3 heart_display.py
+./lcd-run.sh x python3 touch_test.py --size 320x240
+./lcd-run.sh x python3 camera_gui.py
+./lcd-run.sh x python3 opencv_preview.py
 ```
 
-If size must be forced, use the current framebuffer size:
-
-```bash
-SIZE=320x240 DURATION=10 ./run_heart_waveshare28a.sh
-```
-
-## Run Any Python GUI Only When Needed
-
-Use `x` mode for apps that require X11, such as `cv2.imshow`, tkinter, Qt, matplotlib, or normal pygame on this SDL build:
+For OpenCV code using `cv2.imshow`, run it through the temporary X11 mode:
 
 ```bash
 ./lcd-run.sh x python3 camera_gui.py
 ```
 
-The X11 session starts for that command only. When the command exits, the device returns to CLI.
+The session lifecycle is:
 
-## Touch Test
+1. `lcd-run.sh` starts X11 on the LCD.
+2. Your command runs inside that X11 session.
+3. When your command exits, X11 exits.
+4. DietPi returns to normal CLI mode.
+
+## Touchscreen Calibration
+
+Install the ADS7846 calibration:
+
+```bash
+sudo ./install_touch_calibration.sh
+```
+
+Default calibration values:
+
+| Setting | Value |
+| --- | --- |
+| `MatchProduct` | `ADS7846 Touchscreen` |
+| `Driver` | `evdev` |
+| `Calibration` | `3821 182 300 3786` |
+| `SwapAxes` | `0` |
+
+The calibration file is written to:
+
+```text
+/etc/X11/xorg.conf.d/99-calibration.conf
+```
 
 List X11 input devices:
 
 ```bash
 ./lcd-run.sh x xinput list
-```
-
-Run the touch coordinate tester:
-
-```bash
-./lcd-run.sh x python3 touch_test.py --size 320x240
 ```
 
 Expected device:
@@ -105,42 +235,151 @@ Expected device:
 ADS7846 Touchscreen
 ```
 
-Expected applied properties:
+Check applied touch properties:
+
+```bash
+sudo ./lcd-run.sh x xinput list-props 6
+```
+
+Expected properties:
 
 ```text
 Evdev Axis Calibration: 3821, 182, 300, 3786
 Evdev Axes Swap: 0
 ```
 
-If the axis is swapped:
+Run the touch coordinate tester:
+
+```bash
+./lcd-run.sh x python3 touch_test.py --size 320x240
+```
+
+If X/Y axes are swapped:
 
 ```bash
 sudo SWAP_AXES=1 ./install_touch_calibration.sh
 ```
 
-If left/right or top/bottom is reversed, reinstall with adjusted calibration values:
+If left/right is reversed:
 
 ```bash
 sudo CALIBRATION="182 3821 300 3786" ./install_touch_calibration.sh
+```
+
+If top/bottom is reversed:
+
+```bash
 sudo CALIBRATION="3821 182 3786 300" ./install_touch_calibration.sh
+```
+
+After changing calibration, run the touch tester again:
+
+```bash
+./lcd-run.sh x python3 touch_test.py --size 320x240
 ```
 
 ## Direct Framebuffer Mode
 
-Many current pygame/SDL2 builds do not include `fbcon`; in that case `fbcon not available` is expected. Use the default `x` mode above.
+Direct framebuffer mode can work only if the installed SDL build supports a console video driver.
 
-Direct framebuffer mode can still be tested if the SDL build supports it:
+Many current pygame/SDL2 builds do **not** include `fbcon`. If you see this error, it is expected:
+
+```text
+fbcon not available
+```
+
+Use temporary X11 mode instead:
+
+```bash
+./lcd-run.sh x python3 heart_display.py
+```
+
+If you still want to test direct framebuffer mode:
 
 ```bash
 sudo RUN_MODE=fb SDL_DRIVER=kmsdrm DURATION=10 ./run_heart_waveshare28a.sh
 ```
 
+Framebuffer mode targets:
+
+```text
+SDL_FBDEV=/dev/fb1
+```
+
 ## Preview Without LCD
+
+Render the heart demo without using the LCD:
 
 ```bash
 python3 heart_display.py --sdl-driver=offscreen --size 240x320 --duration 0.1 --save heart_preview.png
 ```
 
+## Environment Variables
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `FBDEV` | `/dev/fb1` | Framebuffer device used by the launchers. |
+| `RUN_MODE` | `x` | `x` for temporary X11, `fb` for direct framebuffer mode. |
+| `SDL_DRIVER` | `auto` | SDL driver used in framebuffer mode, for example `kmsdrm`. |
+| `SIZE` | unset | Optional forced render size, for example `320x240`. |
+| `DURATION` | `0` | Demo duration in seconds. `0` waits until quit. |
+| `PYTHON_BIN` | `python3` | Python interpreter used by `run_heart_waveshare28a.sh`. |
+| `DISPLAY_NUM` | `:1` | Temporary X11 display number used by `lcd-run.sh x`. |
+
+## Troubleshooting
+
+### `/dev/fb1` does not exist
+
+Check available framebuffers:
+
+```bash
+ls /dev/fb*
+```
+
+If only `/dev/fb0` appears, reboot after running the display setup:
+
+```bash
+sudo reboot
+```
+
+### The app opens but touch coordinates are wrong
+
+Use the actual X11 framebuffer size:
+
+```bash
+./lcd-run.sh x python3 touch_test.py --size 320x240
+```
+
+Then adjust `CALIBRATION` or `SWAP_AXES` with `install_touch_calibration.sh`.
+
+### `parse_vt_settings: Cannot open /dev/tty0`
+
+This can happen when starting X11 from a non-console remote session. Running through `sudo` usually fixes it:
+
+```bash
+sudo ./lcd-run.sh x python3 touch_test.py --size 320x240
+```
+
+### `fbcon not available`
+
+The installed SDL2 build does not include `fbcon`. Use temporary X11 mode:
+
+```bash
+./lcd-run.sh x python3 heart_display.py
+```
+
+### ALSA warnings appear
+
+Warnings like `Unknown PCM default` are audio-related and do not usually affect display output.
+
+## Notes
+
+- The setup intentionally avoids enabling a full desktop.
+- The X11 session is temporary and command-scoped.
+- The verified X11 size for the tested Waveshare setup is `320x240`.
+- Touch calibration is applied by X11 when the temporary session starts.
+- Private SSH keys should never be committed or shared.
+
 ## License
 
-MIT
+This project is licensed under the MIT License. See [LICENSE](LICENSE).
