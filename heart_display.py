@@ -103,54 +103,61 @@ def blit_text(
     surface.blit(rendered, pos)
 
 
-def draw_code_rain(
+def draw_glyph_field(
     surface: pygame.Surface,
     font: pygame.font.Font,
     seed: int,
     elapsed: float = 0.0,
     alpha_scale: float = 1.0,
-    moving: bool = False,
+    density: float = 0.36,
 ) -> None:
     width, height = surface.get_size()
-    cell_h = max(10, font.get_height())
-    cell_w = max(8, font.size("W")[0] + 2)
+    cell_h = max(10, font.get_height() + 1)
+    cell_w = max(8, font.size("W")[0] + 3)
+    tick = int(elapsed * 18)
 
-    for col, x in enumerate(range(0, width, cell_w)):
-        rng = random.Random(seed + col * 7919)
-        trail = rng.randint(8, 22)
-        speed = rng.uniform(20.0, 76.0)
-        phase = rng.uniform(0.0, height + trail * cell_h)
-        if moving:
-            head = int((phase + elapsed * speed) % (height + trail * cell_h)) - trail * cell_h
-        else:
-            head = rng.randint(-trail * cell_h, height + trail * cell_h)
-
-        for row in range(trail):
-            y = head - row * cell_h
-            if y < -cell_h or y >= height:
+    for row, y in enumerate(range(0, height, cell_h)):
+        for col, x in enumerate(range(0, width, cell_w)):
+            rng = random.Random(seed + row * 104729 + col * 7919)
+            if rng.random() > density:
                 continue
-
-            tick = int(elapsed * rng.uniform(8.0, 18.0)) if moving else 0
-            idx = (rng.randint(0, 9999) + row * 11 + tick) % len(MATRIX_CHARS)
+            idx = (rng.randint(0, 9999) + tick * (1 + (row + col) % 4)) % len(MATRIX_CHARS)
             char = MATRIX_CHARS[idx]
-            strength = max(0.0, 1.0 - row / max(1, trail - 1))
-            color = mix(MATRIX_DIM, MATRIX_GREEN, 0.25 + strength * 0.58)
-            alpha = round((42 + strength * 180) * alpha_scale)
-            if row == 0:
+            strength = rng.uniform(0.18, 0.88)
+            color = mix(MATRIX_DIM, MATRIX_GREEN, strength)
+            alpha = round(rng.randint(46, 185) * alpha_scale)
+            if rng.random() < 0.08:
                 color = MATRIX_WHITE
-                alpha = round(245 * alpha_scale)
+                alpha = round(rng.randint(130, 230) * alpha_scale)
             blit_text(surface, font, char, (x, y), color, alpha)
+
+
+def draw_glitch_artifacts(surface: pygame.Surface, elapsed: float, seed: int, density: int) -> None:
+    width, height = surface.get_size()
+    rng = random.Random(seed + int(elapsed * 16))
+    layer = pygame.Surface((width, height), pygame.SRCALPHA)
+
+    for _ in range(density):
+        y = rng.randrange(height)
+        h = rng.randint(1, max(2, height // 48))
+        x = rng.randrange(width)
+        w = rng.randint(max(8, width // 20), max(9, width // 2))
+        color = rng.choice((MATRIX_GREEN, MATRIX_MID, GLITCH_CYAN))
+        alpha = rng.randint(18, 58)
+        layer.fill((*color, alpha), (x, y, min(w, width - x), h))
+
+    surface.blit(layer, (0, 0))
 
 
 def apply_glitch(surface: pygame.Surface, elapsed: float, seed: int, intensity: float) -> None:
     width, height = surface.get_size()
     source = surface.copy()
     rng = random.Random(seed + int(elapsed * 18))
-    band_count = max(2, round(4 * intensity))
-    max_shift = max(1, round(width * 0.018 * intensity))
+    band_count = max(4, round(8 * intensity))
+    max_shift = max(2, round(width * 0.034 * intensity))
 
     for _ in range(band_count):
-        band_h = rng.randint(1, max(2, height // 44))
+        band_h = rng.randint(1, max(3, height // 30))
         y = rng.randint(0, max(0, height - band_h))
         shift = rng.choice((-1, 1)) * rng.randint(1, max_shift)
         src = pygame.Rect(0, y, width, band_h)
@@ -158,54 +165,16 @@ def apply_glitch(surface: pygame.Surface, elapsed: float, seed: int, intensity: 
 
         tint = pygame.Surface((width, band_h), pygame.SRCALPHA)
         if rng.random() < 0.55:
-            tint.fill((*GLITCH_CYAN, rng.randint(8, 20)))
+            tint.fill((*GLITCH_CYAN, rng.randint(18, 42)))
         else:
-            tint.fill((*GLITCH_PURPLE, rng.randint(7, 16)))
+            tint.fill((*GLITCH_PURPLE, rng.randint(14, 34)))
         surface.blit(tint, (0, y))
 
         if rng.random() < 0.45:
             line_y = y + rng.randrange(band_h)
             line = pygame.Surface((width, 1), pygame.SRCALPHA)
-            line.fill((*MATRIX_WHITE, rng.randint(38, 86)))
+            line.fill((*MATRIX_WHITE, rng.randint(70, 138)))
             surface.blit(line, (0, line_y))
-
-
-def draw_monitor_overlay(surface: pygame.Surface, elapsed: float = 0.0, seed: int = 0) -> None:
-    width, height = surface.get_size()
-    overlay = pygame.Surface((width, height), pygame.SRCALPHA)
-    flicker = 0.86 + 0.14 * math.sin(elapsed * 37.0)
-
-    for y in range(0, height, 3):
-        overlay.fill((0, 0, 0, round(38 * flicker)), (0, y, width, 1))
-    for y in range(1, height, 6):
-        pygame.draw.line(overlay, (0, 255, 95, 14), (0, y), (width, y), 1)
-    for x in range(0, width, 3):
-        pygame.draw.line(overlay, (0, 255, 95, 8), (x, 0), (x, height), 1)
-
-    rng = random.Random(seed + int(elapsed * 24))
-    specks = max(90, width * height // 820)
-    for _ in range(specks):
-        x = rng.randrange(width)
-        y = rng.randrange(height)
-        value = rng.randint(38, 150)
-        overlay.set_at((x, y), (0, value, 44, rng.randint(16, 48)))
-
-    edge_steps = max(16, min(width, height) // 8)
-    for i in range(edge_steps):
-        alpha = round(((edge_steps - i) / edge_steps) ** 2 * 18)
-        inner_w = width - i * 2
-        inner_h = height - i * 2
-        if inner_w <= 0 or inner_h <= 0:
-            break
-        overlay.fill((0, 0, 0, alpha), (i, i, inner_w, 1))
-        overlay.fill((0, 0, 0, alpha), (i, height - i - 1, inner_w, 1))
-        overlay.fill((0, 0, 0, alpha), (i, i, 1, inner_h))
-        overlay.fill((0, 0, 0, alpha), (width - i - 1, i, 1, inner_h))
-
-    border = pygame.Rect(1, 1, width - 2, height - 2)
-    pygame.draw.rect(overlay, (0, 255, 95, 42), border, 1, border_radius=max(8, min(width, height) // 18))
-    pygame.draw.rect(overlay, (0, 0, 0, 96), border, 2, border_radius=max(8, min(width, height) // 18))
-    surface.blit(overlay, (0, 0))
 
 
 def draw_matrix_background(surface: pygame.Surface) -> None:
@@ -213,11 +182,8 @@ def draw_matrix_background(surface: pygame.Surface) -> None:
     surface.fill(BLACK)
 
     font = matrix_font(max(15, min(width, height) // 11), bold=True)
-    draw_code_rain(surface, font, seed=2027, alpha_scale=0.78)
-
-    for y in range(0, height, 8):
-        shade = 14 + (y * 31 // max(1, height)) % 30
-        pygame.draw.line(surface, (0, shade, 14), (0, y), (width, y), 1)
+    draw_glyph_field(surface, font, seed=2027, alpha_scale=0.72, density=0.24)
+    draw_glitch_artifacts(surface, elapsed=0.0, seed=3037, density=18)
 
 
 def heart_points(center: tuple[int, int], scale: float) -> list[tuple[int, int]]:
@@ -262,7 +228,7 @@ def draw_heart(surface: pygame.Surface) -> None:
     heart_material = pygame.Surface(large.get_size(), pygame.SRCALPHA)
     pygame.draw.polygon(heart_material, (0, 18, 8, 235), inner)
     heart_font = matrix_font(max(13, round(scale * 1.15)), bold=True)
-    draw_code_rain(heart_material, heart_font, seed=4049, alpha_scale=1.0)
+    draw_glyph_field(heart_material, heart_font, seed=4049, alpha_scale=1.0, density=0.54)
     heart_material.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
     large.blit(heart_material, (0, 0))
 
@@ -273,8 +239,7 @@ def draw_heart(surface: pygame.Surface) -> None:
 
     smooth = pygame.transform.smoothscale(large, (width, height))
     surface.blit(smooth, (0, 0))
-    apply_glitch(surface, elapsed=0.0, seed=9091, intensity=0.32)
-    draw_monitor_overlay(surface, elapsed=0.0, seed=5051)
+    apply_glitch(surface, elapsed=0.0, seed=9091, intensity=0.64)
 
 
 def build_parser() -> argparse.ArgumentParser:

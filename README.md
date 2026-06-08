@@ -47,8 +47,8 @@ This repository keeps the Pi lightweight: no LightDM, no full desktop, and no pe
 - Maps `tty1` to the LCD framebuffer with `con2fbmap`.
 - Adds an on-demand X11 launcher for GUI applications.
 - Adds ADS7846 touchscreen calibration for X11.
-- Provides a retro Matrix-monitor pygame heart demo with a code-filled heart material.
-- Provides a retro Matrix-monitor animated pygame demo with changing glyphs, randomized code rain, CRT scanlines, and subtle glitch bands.
+- Provides a Matrix-glitch pygame heart demo with a code-filled heart material.
+- Provides a Matrix-glitch animated pygame demo with changing glyphs and stronger horizontal glitch bands.
 - Provides a pygame touch tester for coordinate verification.
 - Avoids enabling a permanent desktop environment.
 
@@ -62,8 +62,8 @@ This repository keeps the Pi lightweight: no LightDM, no full desktop, and no pe
 | `lcd-run.sh` | Runs a command on the LCD through temporary X11 or direct framebuffer mode. |
 | `run_heart_waveshare28a.sh` | Convenience launcher for the Matrix-style pygame heart demo. |
 | `run_animation_waveshare28a.sh` | Convenience launcher for the animated pygame demo. |
-| `heart_display.py` | Retro Matrix-monitor pygame display test with code rain, CRT texture, and a code-filled heart. |
-| `heart_animation.py` | Retro Matrix-monitor animated heart with randomized falling code rain and glitch bands. |
+| `heart_display.py` | Matrix-glitch pygame display test with a code-filled heart and glitch-only overlay. |
+| `heart_animation.py` | Matrix-glitch animated heart with changing glyphs and stronger horizontal glitch bands. |
 | `touch_test.py` | Pygame touch coordinate test app. |
 | `heart_preview.png` | Offscreen-rendered preview of the heart demo. |
 | `animation_preview.png` | Offscreen-rendered preview frame of the animation demo. |
@@ -111,11 +111,11 @@ duration=10 ./run_animation_waveshare28a.sh
 
 ## Matrix-Style Demos
 
-The demos use a black-and-green retro Matrix-monitor visual treatment: randomized digital code rain, neon green heart outlines, dark shadows, changing glyphs, scanlines, phosphor-style pixel grid, edge vignette, and subtle horizontal glitch displacement. The heart surfaces are filled with code texture instead of flat color.
+The demos use a black-and-green Matrix-glitch visual treatment: sparse digital glyph fields, neon green heart outlines, dark shadows, changing glyphs, and stronger horizontal glitch displacement. The heart surfaces are filled with code texture instead of flat color.
 
 ### Static Green Heart
 
-`heart_display.py` renders a centered neon green heart over a Matrix-style digital rain background. The heart is not a flat fill: its interior is clipped code texture, the outline uses layered green glow strokes, and the whole frame gets a retro CRT monitor pass with scanlines, phosphor grid, vignette, and light glitch offsets.
+`heart_display.py` renders a centered neon green heart over a sparse Matrix-style glyph field. The heart is not a flat fill: its interior is clipped code texture, the outline uses layered green glow strokes, and the final frame gets stronger horizontal glitch offsets.
 
 <img src="heart_preview.png" alt="Matrix-style static green heart preview" width="240">
 
@@ -145,14 +145,14 @@ python3 heart_display.py --sdl-driver=offscreen --size 240x320 --duration 0.1 --
 
 ### Animated Green Heart
 
-`heart_animation.py` is a lightweight pygame animation for checking that the on-demand X11 path can render moving graphics smoothly on the Waveshare LCD. Rain columns use randomized speed, trail length, phase, and glyph mutation so the background reads like falling Matrix code instead of a static pattern. A final monitor-effect pass adds CRT scanlines, a pixel grid, edge vignette, flicker, and short horizontal glitch bands. It draws:
+`heart_animation.py` is a lightweight pygame animation for checking that the on-demand X11 path can render moving graphics smoothly on the Waveshare LCD. The background uses a sparse Matrix-style glyph field with characters that mutate over time, plus stronger horizontal glitch bands. It draws:
 
 <img src="animation_preview.png" alt="Matrix-style animated green heart preview" width="320">
 
-- randomized falling code rain with changing glyphs,
+- sparse Matrix-style glyph fields with changing characters,
 - a pulsing neon green heart with code texture inside the shape,
 - layered Matrix-green heart outlines and glow,
-- retro monitor scanlines, pixel texture, and subtle glitch displacement,
+- stronger horizontal glitch displacement,
 - a small elapsed-time label.
 
 Recommended command:
