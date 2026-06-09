@@ -10,14 +10,15 @@ This repository keeps the Pi lightweight: no LightDM, no full desktop, and no pe
 | --- | --- |
 | <img src="heart_preview.png" alt="Matrix-style static green heart preview" width="240"> | <img src="animation_preview.png" alt="Matrix-style animated green heart preview" width="320"> |
 
-## Table Of Contents
 
+## Table Of Contents
 - [Preview](#preview)
 - [Tested Setup](#tested-setup)
 - [What This Provides](#what-this-provides)
-- [Repository Layout](#repository-layout)
 - [Quick Start](#quick-start)
-- [Matrix-Style Demos](#matrix-style-demos)
+- [Repository Layout](#repository-layout)
+- [Demos](#demos)
+
 - [Fresh Display Setup](#fresh-display-setup)
 - [On-Demand X11 Runtime](#on-demand-x11-runtime)
 - [Running GUI Apps](#running-gui-apps)
@@ -51,22 +52,6 @@ This repository keeps the Pi lightweight: no LightDM, no full desktop, and no pe
 - Provides an optimized Matrix-glitch animated pygame demo with cached frames and stronger horizontal glitch bands.
 - Provides a pygame touch tester for coordinate verification.
 - Avoids enabling a permanent desktop environment.
-
-## Repository Layout
-
-| Path | Purpose |
-| --- | --- |
-| `setup_waveshare28a_display.sh` | Full boot/display setup for a fresh DietPi image. |
-| `install_lcd_x11_on_demand.sh` | Installs the X11 framebuffer runtime used by temporary GUI sessions. |
-| `install_touch_calibration.sh` | Installs ADS7846 touchscreen calibration for X11. |
-| `lcd-run.sh` | Runs a command on the LCD through temporary X11 or direct framebuffer mode. |
-| `run_heart_waveshare28a.sh` | Convenience launcher for the Matrix-style pygame heart demo. |
-| `run_animation_waveshare28a.sh` | Convenience launcher for the animated pygame demo. |
-| `heart_display.py` | Matrix-glitch pygame display test with a code-filled heart and glitch-only overlay. |
-| `heart_animation.py` | Optimized Matrix-glitch animated heart with cached glyph/heart frames and stronger horizontal glitch bands. |
-| `touch_test.py` | Pygame touch coordinate test app. |
-| `heart_preview.png` | Offscreen-rendered preview of the heart demo. |
-| `animation_preview.png` | Offscreen-rendered preview frame of the animation demo. |
 
 ## Quick Start
 
@@ -109,9 +94,27 @@ Run the animation demo:
 duration=10 ./run_animation_waveshare28a.sh
 ```
 
-## Matrix-Style Demos
+## Repository Layout
+
+| Path | Purpose |
+| --- | --- |
+| `setup_waveshare28a_display.sh` | Full boot/display setup for a fresh DietPi image. |
+| `install_lcd_x11_on_demand.sh` | Installs the X11 framebuffer runtime used by temporary GUI sessions. |
+| `install_touch_calibration.sh` | Installs ADS7846 touchscreen calibration for X11. |
+| `lcd-run.sh` | Runs a command on the LCD through temporary X11 or direct framebuffer mode. |
+| `run_heart_waveshare28a.sh` | Convenience launcher for the Matrix-style pygame heart demo. |
+| `run_animation_waveshare28a.sh` | Convenience launcher for the animated pygame demo. |
+| `heart_display.py` | Matrix-glitch pygame display test with a code-filled heart and glitch-only overlay. |
+| `heart_animation.py` | Optimized Matrix-glitch animated heart with cached glyph/heart frames and stronger horizontal glitch bands. |
+| `touch_test.py` | Pygame touch coordinate test app. |
+| `heart_preview.png` | Offscreen-rendered preview of the heart demo. |
+| `animation_preview.png` | Offscreen-rendered preview frame of the animation demo. |
+
+
+## Demos
 
 The demos use a black-and-green Matrix-glitch visual treatment: sparse digital glyph fields, neon green heart outlines, dark shadows, changing glyphs, and stronger horizontal glitch displacement. The heart surfaces are filled with code texture instead of flat color.
+
 
 ### Static Green Heart
 
